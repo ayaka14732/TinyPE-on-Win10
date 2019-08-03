@@ -1,0 +1,115 @@
+     1                                  BITS 64
+     2                                  
+     3                                                              ; DOS Header
+     4 00000000 4D5A                        dw 'MZ'                 ; e_magic
+     5 00000002 0000                        dw 0                    ; [UNUSED] e_cblp
+     6                                  pe_hdr:                                                 ; PE Header
+     7 00000004 5045                        dw 'PE'                 ; [UNUSED] c_cp             ; Signature
+     8 00000006 0000                        dw 0                    ; [UNUSED] e_crlc           ; Signature (Cont)
+     9                                                                                          ; Image File Header
+    10 00000008 6486                        dw 0x8664               ; [UNUSED] e_cparhdr        ; Machine
+    11                                  code:
+    12                                  symbol:                                                                                     ; Symbol
+    13 0000000A 0100                        dw 0x01                 ; [UNUSED] e_minalloc       ; NumberOfSections                  ; [UNUSED] Function Order
+    14 0000000C 4D657373616765426F-         db 'MessageBoxW', 0                                                                     ; Function Name
+    14 00000015 785700             
+    15                                      times 14-($-symbol) db 0; [UNUSED] e_maxalloc       ; [UNUSED] TimeDateStamp
+    16                                                              ; [UNUSED] e_ss             ; [UNUSED] TimeDateStamp (Cont)
+    17                                                              ; [UNUSED] e_sp             ; [UNUSED] PointerToSymbolTable
+    18                                                              ; [UNUSED] e_csum           ; [UNUSED] PointerToSymbolTable (Cont)
+    19                                                              ; [UNUSED] e_ip             ; [UNUSED] NumberOfSymbols
+    20                                                              ; [UNUSED] e_cs             ; [UNUSED] NumberOfSymbols (Cont)
+    21 00000018 8000                        dw opt_hdr_size         ; [UNUSED] e_lfarlc         ; SizeOfOptionalHeader
+    22 0000001A 2200                        dw 0x22                 ; [UNUSED] e_ovno           ; Characteristics
+    23                                  opt_hdr:                                                ; Optional Header, COFF Standard Fields
+    24 0000001C 0B02                        dw 0x020b               ; [UNUSED] e_res            ; Magic (PE32+)
+    25 0000001E 00                          db 0                    ; [UNUSED] e_res (Cont)     ; [UNUSED] MajorLinkerVersion
+    26 0000001F 00                          db 0                    ; [UNUSED] e_res (Cont)     ; [UNUSED] MinorLinkerVersion
+    27 00000020 2A010000                    dd code_size            ; [UNUSED] e_res (Cont)     ; SizeOfCode
+    28 00000024 0000                        dw 0                    ; [UNUSED] e_oemid          ; [UNUSED] SizeOfInitializedData
+    29 00000026 0000                        dw 0                    ; [UNUSED] e_oeminfo        ; [UNUSED] SizeOfInitializedData (Cont)
+    30 00000028 00000000                    dd 0                    ; [UNUSED] e_res2           ; [UNUSED] SizeOfUninitializedData
+    31 0000002C [F4000000]                  dd entry                ; [UNUSED] e_res2 (Cont)    ; AddressOfEntryPoint
+    32 00000030 [0A000000]                  dd code                 ; [UNUSED] e_res2 (Cont)    ; BaseOfCode
+    33                                                                                          ; Optional Header, NT Additional Fields
+    34 00000034 0000004001000000            dq 0x000140000000       ; [UNUSED] e_res2 (Cont)    ; ImageBase
+    35 0000003C [04000000]                  dd pe_hdr               ; e_lfanew                  ; [MODIFIED] SectionAlignment (0x10 -> 0x04)
+    36 00000040 04000000                    dd 0x04                                             ; [MODIFIED] FileAlignment (0x10)
+    37 00000044 0600                        dw 0x06                                             ; [UNUSED] MajorOperatingSystemVersion
+    38 00000046 0000                        dw 0                                                ; [UNUSED] MinorOperatingSystemVersion
+    39 00000048 0000                        dw 0                                                ; [UNUSED] MajorImageVersion
+    40 0000004A 0000                        dw 0                                                ; [UNUSED] MinorImageVersion
+    41 0000004C 0600                        dw 0x06                                             ; MajorSubsystemVersion
+    42 0000004E 0000                        dw 0                                                ; MinorSubsystemVersion
+    43 00000050 00000000                    dd 0                                                ; [UNUSED] Reserved1
+    44 00000054 34010000                    dd file_size                                        ; SizeOfImage
+    45 00000058 C4000000                    dd hdr_size                                         ; SizeOfHeaders
+    46 0000005C 00000000                    dd 0                                                ; [UNUSED] CheckSum
+    47 00000060 0200                        dw 0x02                                             ; Subsystem (Windows GUI)
+    48 00000062 6081                        dw 0x8160                                           ; DllCharacteristics
+    49 00000064 0000100000000000            dq 0x100000                                         ; SizeOfStackReserve
+    50 0000006C 0010000000000000            dq 0x1000                                           ; SizeOfStackCommit
+    51 00000074 0000100000000000            dq 0x100000                                         ; SizeOfHeapReserve
+    52                                  dll_name:                                                                                   ; DLLName
+    53 0000007C 5553455233322E646C-         db 'USER32.dll', 0                                                                      ; DLLName
+    53 00000085 6C00               
+    54 00000087 00                          times 12-($-dll_name) db 0                          ; [UNUSED] SizeOfHeapCommit
+    55                                                                                          ; [UNUSED] LoaderFlags
+    56 00000088 02000000                    dd 0x02                                             ; [MODIFIED] NumberOfRvaAndSizes (0x10)
+    57                                  
+    58                                  ; Optional Header, Data Directories
+    59 0000008C 00000000                    dd 0                    ; [UNUSED] Export, RVA
+    60 00000090 00000000                    dd 0                    ; [UNUSED] Export, Size
+    61                                  iatbl:                                                  ; Import Address Directory
+    62 00000094 [10010000]                  dd itbl                 ; Import, RVA               ; [USEDAFTERLOAD] DLLFuncEntry
+    63 00000098 24000000                    dd itbl_size            ; Import, Size              ; [USEDAFTERLOAD] DLLFuncEntry (Cont)
+    64                                  iatbl_size equ $-iatbl
+    65                                  
+    66                                  opt_hdr_size equ $-opt_hdr
+    67                                  
+    68                                                              ; Section Table
+    69 0000009C 2E00                        section_name db '.', 0  ; Name
+    70 0000009E 00<rept>                    times 8-($-section_name) db 0
+    71 000000A4 2A010000                    dd sect_size            ; VirtualSize
+    72 000000A8 [94000000]                  dd iatbl                ; VirtualAddress
+    73 000000AC 2A010000                    dd code_size            ; SizeOfRawData
+    74 000000B0 [94000000]                  dd iatbl                ; PointerToRawData
+    75                                  content:                                                ; Strings
+    76 000000B4 4100420043004400            db 0x41,0x00,0x42,0x00,0x43,0x00,0x44,0x00
+    77 000000BC 4500460047000000            db 0x45,0x00,0x46,0x00,0x47,0x00,0,0
+    78                                                              ; [UNUSED] PointerToRelocations
+    79                                                              ; [UNUSED] PointerToLinenumbers
+    80                                                              ; [UNUSED] NumberOfRelocations
+    81                                                              ; [UNUSED] NumberOfLinenumbers
+    82                                                              ; [UNUSED] Characteristics
+    83                                  hdr_size equ $-$$
+    84                                  
+    85                                  title:
+    86 000000C4 3DD8AFDC20005400            db 0x3d,0xd8,0xaf,0xdc,0x20,0x00,0x54,0x00
+    87 000000CC 69006E0079005000            db 0x69,0x00,0x6e,0x00,0x79,0x00,0x50,0x00
+    88 000000D4 450020006F006E00            db 0x45,0x00,0x20,0x00,0x6f,0x00,0x6e,0x00
+    89 000000DC 2000570069006E00            db 0x20,0x00,0x57,0x00,0x69,0x00,0x6e,0x00
+    90 000000E4 64006F0077007300            db 0x64,0x00,0x6f,0x00,0x77,0x00,0x73,0x00
+    91 000000EC 2000310030000000            db 0x20,0x00,0x31,0x00,0x30,0x00,0,0
+    92                                  
+    93                                  ; Entry
+    94                                  entry:
+    95 000000F4 41B940002400                mov r9d, 0x00240040     ; uType
+    96 000000FA 4C8D05C3FFFFFF              lea r8, [rel title]     ; lpCaption
+    97 00000101 488D15ACFFFFFF              lea rdx, [rel content]  ; lpText
+    98 00000108 31C9                        xor ecx, ecx            ; hWnd
+    99 0000010A FF2584FFFFFF                jmp [rel iatbl]         ; MessageBoxW
+   100                                  
+   101                                  itbl:                       ; Import Directory
+   102 00000110 [2401000000000000]          dq intbl                ; OriginalFirstThunk
+   103 00000118 00000000                    dd 0                    ; [UNUSED] TimeDateStamp
+   104 0000011C [7C000000]                  dd dll_name             ; ForwarderChain
+   105 00000120 [94000000]                  dd iatbl                ; Name
+   106                                  intbl:                                                  ; Import Name Table
+   107 00000124 [0A00000000000000]          dq symbol               ; [UNUSED] FirstThunk       ; Symbol
+   108 0000012C 0000000000000000            dq 0                                                ; nullptr
+   109                                  itbl_size equ $-itbl
+   110                                  
+   111                                  sect_size equ $-code
+   112                                  code_size equ $-code
+   113                                  file_size equ $-$$

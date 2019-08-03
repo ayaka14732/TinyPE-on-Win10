@@ -1,0 +1,89 @@
+--- step7/stretch.asm	1970-01-01 00:00:00 +0000
++++ step8/stretch.asm	1970-01-01 00:00:00 +0000
+@@ -25,19 +25,24 @@
+     db 0                    ; [UNUSED] e_res (Cont)     ; [UNUSED] MajorLinkerVersion
+     db 0                    ; [UNUSED] e_res (Cont)     ; [UNUSED] MinorLinkerVersion
+     dd code_size            ; [UNUSED] e_res (Cont)     ; SizeOfCode
+-    dw 0                    ; [UNUSED] e_oemid          ; [UNUSED] SizeOfInitializedData
+-    dw 0                    ; [UNUSED] e_oeminfo        ; [UNUSED] SizeOfInitializedData (Cont)
+-    dd 0                    ; [UNUSED] e_res2           ; [UNUSED] SizeOfUninitializedData
++code_4:                                                                                     ; Code Fragment 4
++    jmp [rel iatbl]                                                                         ; MessageBoxW
++    times 8-($-code_4) db 0 ; [UNUSED] e_oemid          ; [UNUSED] SizeOfInitializedData
++                            ; [UNUSED] e_oeminfo        ; [UNUSED] SizeOfInitializedData (Cont)
++                            ; [UNUSED] e_res2           ; [UNUSED] SizeOfUninitializedData
+     dd entry                ; [UNUSED] e_res2 (Cont)    ; AddressOfEntryPoint
+     dd code                 ; [UNUSED] e_res2 (Cont)    ; BaseOfCode
+                                                         ; Optional Header, NT Additional Fields
+     dq 0x000140000000       ; [UNUSED] e_res2 (Cont)    ; ImageBase
+     dd pe_hdr               ; e_lfanew                  ; [MODIFIED] SectionAlignment (0x10 -> 0x04)
+     dd 0x04                                             ; [MODIFIED] FileAlignment (0x10)
+-    dw 0x06                                             ; [UNUSED] MajorOperatingSystemVersion
+-    dw 0                                                ; [UNUSED] MinorOperatingSystemVersion
+-    dw 0                                                ; [UNUSED] MajorImageVersion
+-    dw 0                                                ; [UNUSED] MinorImageVersion
++code_3:                                                                                     ; Code Fragment 3
++    lea rdx, [rdx+content-entry]                                                            ; lpText
++    jmp code_4
++    times 8-($-code_3) db 0                             ; [UNUSED] MajorOperatingSystemVersion
++                                                        ; [UNUSED] MinorOperatingSystemVersion
++                                                        ; [UNUSED] MajorImageVersion
++                                                        ; [UNUSED] MinorImageVersion
+     dw 0x06                                             ; MajorSubsystemVersion
+     dw 0                                                ; MinorSubsystemVersion
+     dd 0                                                ; [UNUSED] Reserved1
+@@ -55,9 +60,12 @@
+                                                         ; [UNUSED] LoaderFlags
+     dd 0x02                                             ; [MODIFIED] NumberOfRvaAndSizes (0x10)
+ 
+-; Optional Header, Data Directories
+-    dd 0                    ; [UNUSED] Export, RVA
+-    dd 0                    ; [UNUSED] Export, Size
++                            ; Optional Header, Data Directories
++code_2:                                                 ; Code Fragment 2
++    mov r9d, 0x00240040                                 ; uType
++    jmp code_3
++    times 8-($-code_2) db 0 ; [UNUSED] Export, RVA
++                            ; [UNUSED] Export, Size
+ iatbl:                                                  ; Import Address Directory
+     dd itbl                 ; Import, RVA               ; [USEDAFTERLOAD] DLLFuncEntry
+     dd itbl_size            ; Import, Size              ; [USEDAFTERLOAD] DLLFuncEntry (Cont)
+@@ -67,6 +75,9 @@
+ 
+                             ; Section Table
+     section_name db '.', 0  ; Name
++code_1:                                                 ; Code Fragment 1
++    lea r8, [rdx+title-entry]                           ; lpCaption
++    jmp code_2
+     times 8-($-section_name) db 0
+     dd sect_size            ; VirtualSize
+     dd iatbl                ; VirtualAddress
+@@ -90,23 +101,18 @@
+     db 0x64,0x00,0x6f,0x00,0x77,0x00,0x73,0x00
+     db 0x20,0x00,0x31,0x00,0x30,0x00,0,0
+ 
+-; Entry
+-entry:
+-    mov r9d, 0x00240040     ; uType
+-    lea r8, [rel title]     ; lpCaption
+-    lea rdx, [rel content]  ; lpText
+-    xor ecx, ecx            ; hWnd
+-    jmp [rel iatbl]         ; MessageBoxW
+-
+ itbl:                       ; Import Directory
+     dq intbl                ; OriginalFirstThunk
+-    dd 0                    ; [UNUSED] TimeDateStamp
++entry:                                                  ; Code Fragment 0
++    xor ecx, ecx                                        ; hWnd
++    jmp code_1
++    times 4-($-entry) db 0  ; [UNUSED] TimeDateStamp
+     dd dll_name             ; ForwarderChain
+     dd iatbl                ; Name
+ intbl:                                                  ; Import Name Table
+     dq symbol               ; [UNUSED] FirstThunk       ; Symbol
+-    dq 0                                                ; nullptr
+ itbl_size equ $-itbl
++    dq 0                                                ; nullptr
+ 
+ sect_size equ $-code
+ code_size equ $-code

@@ -1,0 +1,77 @@
+--- step5/stretch.asm	1970-01-01 00:00:00 +0000
++++ step6/stretch.asm	1970-01-01 00:00:00 +0000
+@@ -23,12 +23,6 @@
+     times 10 dw 0           ; [UNUSED] e_res2
+     dd pe_hdr               ; e_lfanew
+ 
+-; DOS Stub
+-    times 8 dq 0            ; [UNUSED] DOS Stub
+-
+-; Rich Header
+-    times 8 dq 0            ; [UNUSED] Rich Header
+-
+ ; PE Header
+ pe_hdr:
+     dw 'PE', 0              ; Signature
+@@ -74,41 +68,13 @@
+     dq 0x100000             ; SizeOfHeapReserve
+     dq 0x1000               ; SizeOfHeapCommit
+     dd 0                    ; LoaderFlags
+-    dd 0x10                 ; NumberOfRvaAndSizes
++    dd 0x02                 ; NumberOfRvaAndSizes
+ 
+ ; Optional Header, Data Directories
+     dd 0                    ; Export, RVA
+     dd 0                    ; Export, Size
+     dd itbl                 ; Import, RVA
+     dd itbl_size            ; Import, Size
+-    dd 0                    ; Resource, RVA
+-    dd 0                    ; Resource, Size
+-    dd 0                    ; Exception, RVA
+-    dd 0                    ; Exception, Size
+-    dd 0                    ; Certificate, RVA
+-    dd 0                    ; Certificate, Size
+-    dd 0                    ; Base Relocation, RVA
+-    dd 0                    ; Base Relocation, Size
+-    dd 0                    ; Debug, RVA
+-    dd 0                    ; Debug, Size
+-    dd 0                    ; Architecture, RVA
+-    dd 0                    ; Architecture, Size
+-    dd 0                    ; Global Ptr, RVA
+-    dd 0                    ; Global Ptr, Size
+-    dd 0                    ; TLS, RVA
+-    dd 0                    ; TLS, Size
+-    dd 0                    ; Load Config, RVA
+-    dd 0                    ; Load Config, Size
+-    dd 0                    ; Bound Import, RVA
+-    dd 0                    ; Bound Import, Size
+-    dd iatbl                ; IAT, RVA
+-    dd iatbl_size           ; IAT, Size
+-    dd 0                    ; Delay Import Descriptor, RVA
+-    dd 0                    ; Delay Import Descriptor, Size
+-    dd 0                    ; CLR Runtime Header, RVA
+-    dd 0                    ; CLR Runtime Header, Size
+-    dd 0                    ; Reserved, RVA
+-    dd 0                    ; Reserved, Size
+ 
+ opt_hdr_size equ $-opt_hdr
+ 
+@@ -147,9 +113,6 @@
+     db 0x41,0x00,0x42,0x00,0x43,0x00,0x44,0x00
+     db 0x45,0x00,0x46,0x00,0x47,0x00,0,0
+ 
+-; Debug Table
+-    times 24 dq 0           ; [UNUSED] Debug Table
+-
+ ; Entry
+ entry:
+     mov r9d, 0x00240040     ; uType
+@@ -168,8 +131,6 @@
+     dd iatbl                ; Name
+     dq 0                    ; FirstThunk
+ 
+-    times 3 dd 0
+-
+ itbl_size equ $-itbl
+ 
+ ; Import Name Table
