@@ -1,5 +1,7 @@
 # 64 位 Windows 10 下的最小 PE 文件
 
+[English Version - Minimal PE File on 64-Bit Windows 10](README-en.md)
+
 ## 实验内容
 
 本次实验尝试制作 64 位 Windows 10 操作系统下的最小 PE 文件。
