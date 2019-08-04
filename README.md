@@ -14,8 +14,8 @@
 
 1. 使用 C 语言调用 Windows API，并使用 MSVC 编译器编译生成 PE 文件，实现弹出消息框的功能
 1. 修改 MSVC 编译器的编译选项，减小生成的 PE 文件大小
-1. 利用 [PE Tools](https://petoolse.github.io/petools/){lang=en} 初步分析生成的 PE 文件，清除无用的 `TimeDateStamp` 字段、Rich header 和 debug directory
-1. 利用二进制编辑器手动删除无用的 MS-DOS stub
+1. 利用 [PE Tools](https://petoolse.github.io/petools/) 初步分析生成的 PE 文件，清除无用的 `TimeDateStamp` 字段、Rich header 和 debug directory
+1. 利用二进制编辑器手动清除无用的 MS-DOS stub
 1. 详细分析修改后的 PE 文件的各字段，然后使用汇编语言手动构造该 PE 文件，并使用伪指令替换硬编码的数值（例如使用 `$-$$` 替换文件大小）
 1. 删除无用的 DOS stub、Rich header 和 debug table；对于 optional header 的 data directories 中的 16 项，仅保留前 2 项，并将 `NumberOfRvaAndSizes` 设置为 2；删除 `itbl` 后用于对齐的字节
 1. 通过将各字段的值修改为其他值后，观察程序的行为是否受到影响，进一步得出文件中的无用字段，将有作用的字段与无用字段重叠
@@ -51,7 +51,7 @@
 
 > 使用 C 语言调用 Windows API，并使用 MSVC 编译器编译生成 PE 文件，实现弹出消息框的功能
 
-Windows API 中的 `MessageBoxW` 函数参考了 [MessageBoxW function](https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-messageboxw){lang=en}。
+Windows API 中的 `MessageBoxW` 函数参考了 [MessageBoxW function](https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-messageboxw)。
 
 在 Windows 编程中，函数名以 A 结尾表示字符编码使用用户的当前代码页，以 W 结尾表示使用 UTF-16。由于目前用户使用的代码页并不统一，出于兼容性的考虑，使用 W 结尾的 `MessageBoxW` 函数。
 
@@ -97,7 +97,7 @@ tiny.obj
 
 > 修改 MSVC 编译器的编译选项，减小生成的 PE 文件大小
 
-此步骤主要参考了 [Minimize the size of your program – high level](https://blogs.msdn.microsoft.com/xiangfan/2008/09/19/minimize-the-size-of-your-program-high-level/){lang=en} 和 [Linker Options](https://docs.microsoft.com/en-us/cpp/build/reference/linker-options?view=vs-2019){lang=en}。
+此步骤主要参考了 [Minimize the size of your program – high level](https://blogs.msdn.microsoft.com/xiangfan/2008/09/19/minimize-the-size-of-your-program-high-level/) 和 [Linker Options](https://docs.microsoft.com/en-us/cpp/build/reference/linker-options?view=vs-2019)。
 
 将以下代码保存为 `tiny.c`：
 
@@ -130,7 +130,7 @@ LINK : warning LNK4254: section '.text' (60000020) merged into '.' (40000040) wi
 
 ### 步骤三
 
-> 利用 [PE Tools](https://petoolse.github.io/petools/){lang=en} 初步分析生成的 PE 文件，清除无用的 `TimeDateStamp` 字段、Rich header 和 debug directory
+> 利用 [PE Tools](https://petoolse.github.io/petools/) 初步分析生成的 PE 文件，清除无用的 `TimeDateStamp` 字段、Rich header 和 debug directory
 
 打开 PE Tools (v1.9.762.2018)，单击“PE Editor”，然后打开 `tiny.exe`。
 
@@ -199,15 +199,15 @@ ff488d151cffffff33c948ff25d3feffffcccccc48030000000000000000
 
 PE 文件的结构主要参考了以下资料：
 
-* 总述：[PE Format](https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format){lang=en}，[x86 Disassembly/Windows Executable Files](https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files){lang=en}，[Portable Executable File Format](https://blog.kowalczyk.info/articles/pefileformat.html){lang=en}
-* Rich header：[The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm){lang=en}
-* Import address table：[Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872){lang=en}
+* 总述：[PE Format](https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format)，[x86 Disassembly/Windows Executable Files](https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files)，[Portable Executable File Format](https://blog.kowalczyk.info/articles/pefileformat.html)
+* Rich header：[The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm)
+* Import address table：[Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872)
 
-在理解 PE 文件的结构时，主要使用的工具有 [PE Tools](https://petoolse.github.io/petools/){lang=en} 和 [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php){lang=en}。
+在理解 PE 文件的结构时，主要使用的工具有 [PE Tools](https://petoolse.github.io/petools/) 和 [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php)。
 
 根据 NASM 汇编器的 [官方文档](https://www.nasm.us/doc/nasmdoc3.html#section-3.2.1)，分别使用伪指令 `db`、`dw`、`dd`、`dq` 声明 1、2、4、8 字节的数据。
 
-另外，使用伪指令替换硬编码的数值。例如，文件大小的数值为 0x0380，使用 `file_size equ $-$$` 替换；机器指令 0x41b940002400 使用 `mov r9d, 0x00240040` 替换。
+使用伪指令替换硬编码的数值。例如，文件大小的数值为 0x0380，使用 `file_size equ $-$$` 替换；机器指令 0x41b940002400 使用 `mov r9d, 0x00240040` 替换。
 
 编写的 `stretch.asm` 如下所示：
 
@@ -425,7 +425,7 @@ $ diff =(xxd step4/tiny.exe) =(xxd step5/stretch.exe)
 > 00000310: 1cff ffff 31c9 ff25 d4fe ffff cccc cccc  ....1..%........
 ```
 
-`xor ecx, ecx` 指令在 `tiny.exe` 中由机器码 0x33c9 表示，而在 `stretch.exe` 中由 0x31c9 表示。由 [XOR — Logical Exclusive OR](https://www.felixcloutier.com/x86/xor){lang=en} 可知，这是由于指令编码方式不同，不影响指令的效果：
+`xor ecx, ecx` 指令在 `tiny.exe` 中由机器码 0x33c9 表示，而在 `stretch.exe` 中由 0x31c9 表示。由 [XOR — Logical Exclusive OR](https://www.felixcloutier.com/x86/xor) 可知，这是由于指令编码方式不同，不影响指令的效果：
 
 ```zsh
 $ echo 33c9 | xxd -p -r - | ndisasm -b 64 -
@@ -443,7 +443,7 @@ $ echo ff25d4feffff | xxd -p -r - | ndisasm -b 64 -
 00000000  FF25D4FEFFFF      jmp [rel 0xfffffffffffffeda]
 ```
 
-由 Stack Overflow 上的 [一个回答](https://stackoverflow.com/a/36800114) 可知，机器码中的 48 表示 REX.W 前缀，会被处理器忽略；这一前缀可能与 Windows x64 的 unwind data 有关。而且从运行结果看，这一修改不影响指令的效果。
+由 Stack Overflow 上的 [一个回答](https://stackoverflow.com/a/36800114) 可知，机器码中的 48 前缀表示 REX.W，会被处理器忽略；这一前缀可能与 Windows x64 的 unwind data 有关。而且从运行结果看，这一修改不影响指令的效果。
 
 **文件大小 896 字节，熵 1.607880**
 
@@ -676,7 +676,7 @@ $ grep -A 5 entry: stretch.lst
 
 第五条指令是跳转指令。为了减小 PE 文件的大小，不必处理 `MessageBoxW` 函数的返回值，直接使用 `jmp` 指令跳转到目标函数。
 
-由 [JMP — Jump](https://www.felixcloutier.com/x86/jmp){lang=en} 可知，短跳转指令的跳转范围为 –128 至 +127，机器码只占 2 个字节。因此，可以将每条指令作为单独的部分，再用短跳转指令连接各条指令。但是，两条 `lea` 指令的机器码仍占 9 个字节：
+由 [JMP — Jump](https://www.felixcloutier.com/x86/jmp) 可知，短跳转指令的跳转范围为 –128 至 +127，机器码只占 2 个字节。因此，可以将每条指令作为单独的部分，再用短跳转指令连接各条指令。但是，两条 `lea` 指令的机器码仍占 9 个字节：
 
 | 汇编指令 | 机器码长度 |
 | :- | :- |
@@ -686,7 +686,7 @@ $ grep -A 5 entry: stretch.lst
 | `xor ecx, ecx` then `jmp` | 4 |
 | `jmp [rel iatbl]` | 6 |
 
-在 [x64dbg](https://x64dbg.com/){lang=en} 中调试时发现，当程序执行到用户代码的入口点时，RDX 寄存器的值会被设置为入口地址：
+在 [x64dbg](https://x64dbg.com/) 中调试时发现，当程序执行到用户代码的入口点时，RDX 寄存器的值会被设置为入口地址：
 
 ![View RDX in x64dbg](index.files/rdx.png)
 
@@ -898,5 +898,5 @@ $ xxd stretch.exe
 
 除文中已说明的参考资料外，本实验还参考了以下资料：
 
-1. [Tiny PE](http://www.phreedom.org/research/tinype/){lang=en}
-1. [Writing ultra-small Windows executables](https://keyj.emphy.de/win32-pe/){lang=en}
+1. [Tiny PE](http://www.phreedom.org/research/tinype/)
+1. [Writing ultra-small Windows executables](https://keyj.emphy.de/win32-pe/)
