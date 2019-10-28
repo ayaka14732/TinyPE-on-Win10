@@ -60,7 +60,7 @@ Windows API 中的 `MessageBoxW` 函数参考了 [MessageBoxW function](https://
 将以下代码保存为 `tiny.c`：
 
 ```c
-##include <Windows.h>
+#include <Windows.h>
 
 int main() {
     MessageBoxW( NULL /* hWnd */,
@@ -104,7 +104,7 @@ tiny.obj
 将以下代码保存为 `tiny.c`：
 
 ```c
-##include <Windows.h>
+#include <Windows.h>
 
 void _() {
     MessageBoxW( NULL /* hWnd */,
@@ -520,7 +520,7 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 > 通过将各字段的值修改为其他值后，观察程序的行为是否受到影响，进一步得出文件中的无用字段，将有作用的字段与无用字段重叠
 
-逐个修改 `stretch.asm` 中每个字段的值，例如修改为 0 或其他数据。如果修改后程序无法运行，或运行时发生异常，或显示的内容不正确，则认为该字段是有作用的字段；如果修改后程序仍能正常运行，则认为该字段是无用字段。
+逐个修改 `stretch.asm` 中每个字段的值，例如修改为 0。如果修改后程序无法运行，或运行时发生异常，或显示的内容不正确，则认为该字段是有作用的字段；如果修改后程序仍能正常运行，则认为该字段是无用字段。
 
 将有作用的字段无用字段与重叠，例如将 PE header 的起始位置设置为 DOS header 的 0x04 处，可以将两个文件头的字段重叠，缩小文件大小。
 

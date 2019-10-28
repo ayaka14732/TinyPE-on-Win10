@@ -38,12 +38,12 @@ In step 1 a plain PE file is produced by plain C, which is used to compare with 
 
 ## Environment
 
-* Operating System：Microsoft Windows 10 Version 1903 (v10.0.18362.239) 64-bit
-* Shell：zsh 5.7.1 (x86_64-pc-msys)
-* C Compiler：Microsoft (R) C/C++ Optimizing Compiler Version 19.22.27905 for x64
-* Linker：Microsoft (R) Incremental Linker Version 14.22.27905.0
-* Assembler：NASM version 2.14.02 compiled on Jan 30 2019
-* Debugger：x64dbg May 19 2019, 18:13:13
+* Operating System: Microsoft Windows 10 Version 1903 (v10.0.18362.239) 64-bit
+* Shell: zsh 5.7.1 (x86_64-pc-msys)
+* C Compiler: Microsoft (R) C/C++ Optimizing Compiler Version 19.22.27905 for x64
+* Linker: Microsoft (R) Incremental Linker Version 14.22.27905.0
+* Assembler: NASM version 2.14.02 compiled on Jan 30 2019
+* Debugger: x64dbg May 19 2019, 18:13:13
 
 ## Steps
 
@@ -58,7 +58,7 @@ In Windows programming, function name ending with A means that the character enc
 Save the following code as `tiny.c`:
 
 ```c
-##include <Windows.h>
+#include <Windows.h>
 
 int main() {
     MessageBoxW( NULL /* hWnd */,
@@ -102,7 +102,7 @@ This step mainly referenced [Minimize the size of your program – high level](h
 Save the following code as `tiny.c`:
 
 ```c
-##include <Windows.h>
+#include <Windows.h>
 
 void _() {
     MessageBoxW( NULL /* hWnd */,
@@ -199,9 +199,9 @@ ff488d151cffffff33c948ff25d3feffffcccccc48030000000000000000
 
 The structure of PE files referenced the following contents:
 
-* Overview: [PE Format](https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format)，[x86 Disassembly/Windows Executable Files](https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files)，[Portable Executable File Format](https://blog.kowalczyk.info/articles/pefileformat.html)
-* Rich header：[The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm)
-* Import address table：[Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872)
+* Overview: [PE Format](https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format), [x86 Disassembly/Windows Executable Files](https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files), [Portable Executable File Format](https://blog.kowalczyk.info/articles/pefileformat.html)
+* Rich header: [The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm)
+* Import address table: [Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872)
 
 When understanding the structure of PE files, the tools mainly used are [PE Tools](https://petoolse.github.io/petools/) and [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php).
 
@@ -451,7 +451,7 @@ According to [an answer](https://stackoverflow.com/a/36800114) on Stack Overflow
 
 > Remove unused DOS stub, Rich header and debug table. For the 16 entries in data directories of optional header, only keep the first 2 entries, and set `NumberOfRvaAndSizes` to 2. Remove the padding bytes after `itbl`
 
-Save the modification as `stretch.asm`：
+Save the modification as `stretch.asm`:
 
 ```zsh
 $ diff step5/stretch.asm step6/stretch.asm
