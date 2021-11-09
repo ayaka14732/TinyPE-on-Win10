@@ -1,4 +1,4 @@
-# Minimal PE File on 64-Bit Windows 10
+# Minimal 64-Bit PE File on Windows 10
 
 ## Introduction
 
@@ -89,7 +89,7 @@ tiny.obj
 
 The compilation yields `tiny.exe`, which runs normally.
 
-![Run `tiny1.exe`](index.files/tiny1.exe.png)
+![Run `tiny1.exe`](images/tiny1.exe.png)
 
 **File size 94208 bytes. Entropy 5.924863**
 
@@ -134,7 +134,7 @@ The compilation yields `tiny.exe`, which runs normally.
 
 Open PE Tools (v1.9.762.2018). Click "PE Editor", then open `tiny.exe`.
 
-![Open `tiny2.exe` by PE Tools](index.files/tiny2.exe.png)
+![Open `tiny2.exe` by PE Tools](images/tiny2.exe.png)
 
 * Click "File Header". Find "Time/Date" and set to 0
 * Click "View Rich", then click "Clear Sign"
