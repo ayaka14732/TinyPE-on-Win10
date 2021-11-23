@@ -1,7 +1,5 @@
 # Windows 10 下的最小 64 位 PE 文件
 
-[English Version - Minimal PE File on 64-Bit Windows 10](README-en.md)
-
 ## 简介
 
 本次实验尝试制作了 Windows 10 操作系统下的最小 64 位 PE 文件，该文件可以弹出带有文字提示的消息框，且满足实验的三项限制条件：
@@ -36,7 +34,7 @@
 | 8 | 280 | 2.620173 |
 | 9 | 268 | 2.667864 |
 
-在有的步骤中，虽然文件大小没有减小，但文件的熵减小了，这说明文件内部有更多的零，也就说明后续步骤有更多的压缩空间。
+在第 3-5 步中，虽然文件大小没有减小，但文件的熵减小了，这说明文件内部有更多的零，也就说明后续步骤有更多的压缩空间。
 
 ## 实验环境
 
@@ -195,13 +193,13 @@ ff488d151cffffff33c948ff25d3feffffcccccc48030000000000000000
 - Rich header：[The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm)
 - Import address table：[Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872)
 
-另外，在理解 PE 文件的结构时，还使用了 [PE Tools](https://petoolse.github.io/petools/) 和 [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php) 这两个工具。
+另外，还使用了 [PE Tools](https://petoolse.github.io/petools/) 和 [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php) 这两个工具。
 
 在理解 PE 文件的结构后，使用汇编语言手动编写一个相同的 PE 文件。
 
-注意在使用 NASM 汇编器时，根据[官方文档](https://www.nasm.us/doc/nasmdoc3.html#section-3.2.1)，分别使用伪指令 `db`、`dw`、`dd`、`dq` 声明 1、2、4、8 字节的数据。
+在编写汇编语言时，要特别注意不能使用硬编码的数值，而是要使用伪指令计算得出相应的数值。例如，文件大小的数值 `0x0380` 使用 `file_size equ $-$$` 替换，机器指令 `0x41b940002400` 使用 `mov r9d, 0x00240040` 替换。这是因为如果使用了硬编码的数值，后续步骤中 PE 文件的结构发生变化时，这些数值并不会随之改变，文件就会损坏。
 
-此外，在编写汇编语言时，要特别注意不能使用硬编码的数值，而是要使用伪指令计算得出相应的数值。例如，文件大小的数值 `0x0380` 使用 `file_size equ $-$$` 替换，机器指令 `0x41b940002400` 使用 `mov r9d, 0x00240040` 替换。这是因为如果使用了硬编码的数值，后续步骤中 PE 文件的结构发生变化时，这些数值并不会随之改变，文件就会损坏。
+此外，在使用 NASM 汇编器时，根据[官方文档](https://www.nasm.us/doc/nasmdoc3.html#section-3.2.1)，分别使用伪指令 `db`、`dw`、`dd`、`dq` 声明 1、2、4、8 字节的数据。
 
 编写的汇编语言文件 `stretch.asm` 如下：
 
@@ -437,7 +435,7 @@ $ echo ff25d4feffff | xxd -p -r - | ndisasm -b 64 -
 00000000  FF25D4FEFFFF      jmp [rel 0xfffffffffffffeda]
 ```
 
-由 Stack Overflow 上的[一个回答](https://stackoverflow.com/a/36800114) 可知，机器码中的 `48` 前缀表示 REX.W，会被处理器忽略。这一前缀可能与 Windows x64 的 unwind data 有关。不论如何，从运行结果上看，这一修改不影响指令的效果。
+由 Stack Overflow 上的[一个回答](https://stackoverflow.com/a/36800114)可知，机器码中的 `48` 前缀表示 REX.W，会被处理器忽略。这一前缀可能与 Windows x64 的 unwind data 有关。不论如何，从运行结果上看，这一修改不影响指令的效果。
 
 由此可知，这一步使用汇编语言编写的 `stretch.exe` 和上一步的 `tiny.exe` 是等价的。
 
@@ -512,9 +510,9 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 **第七步：虽然在上一步中删除了所有可以直接删除的无用部分，但还有一些无用字段不可以被直接删除。这是因为 PE 文件含有多个文件头，这些无用字段位于文件头中，而文件头的格式是固定的，也就是说即使文件头中的某个字段没有被使用，它也要在文件头中占据相应的位置，所以不能直接删除。为此，可以采取重叠的方法，通过精心选取合适的重叠方式，将多个文件头重叠在一起，并保证重叠之后，每个重叠的位置最多只能对应一个有用字段。这样就可以在不破坏文件头的前提下，有效地减小文件大小。**
 
-要判断一个字段究竟是有用字段还是无用字段，可以逐个修改 `stretch.asm` 中每个字段的值，比如修改为 0。如果修改以后程序出现问题，则说明该字段是有用字段，否则是无用字段。
+要判断一个字段是否是有用字段，可以采用修改的方法，比如将字段的值修改为 0。如果修改以后程序出现问题，则说明该字段是有用字段，否则是无用字段。
 
-判断出有用字段和无用字段后，可以将有用字段与无用字段相互重叠，从而减小文件大小。例如，将 PE header 的起始位置设置为 DOS header 的 `0x04` 处，可以将两个文件头的字段重叠。重叠时可能存在多种方法，本次实验只选择其中一种方法。
+判断出有用字段和无用字段后，可以将有用字段与无用字段相互重叠，从而减小文件大小。例如，将 PE header 的起始位置设置为 DOS header 的 `0x04` 处，可以将两个文件头的字段重叠。重叠时可能存在多种不同的重叠方法，本次实验只选择其中一种方法。
 
 另外，虽然 Import table 和 DLLFuncEntry 都是有用字段，但是两者可以重叠。这是因为 Import table 只在程序加载前使用，DLLFuncEntry 只在程序加载后使用，所以并不会产生冲突。
 
@@ -676,7 +674,7 @@ $ grep -A 5 entry: stretch.lst
 
 ![](images/rdx.png)
 
-这时，通过对 x64 指令集的深入学习和充分掌握，立即意识到在 `lea` 指令中，如果以 RDX 寄存器作为基址，可以使对应的机器码更短。RDX 寄存器的值会被设置为入口地址，也就是说 RDX 寄存器的值不是随机的，也就具备了作基址的条件。
+这时，通过对 x64 指令集的深入学习和充分掌握，意识到在 `lea` 指令中，如果以 RDX 寄存器作为基址，可以使对应的机器码更短。RDX 寄存器的值被设置为入口地址，也就是说 RDX 寄存器的值不是随机的，也就具备了作基址的条件。
 
 在原来的程序中，以 RIP 寄存器作为基址，对应的机器码长度为 7：
 
@@ -685,7 +683,7 @@ $ grep -A 5 entry: stretch.lst
 | `lea r8, [rip-0x4d]` | 0x4c8d05b3ffffff | 7 |
 | `lea rdx, [rip-0x44]` | 0x488d15bcffffff | 7 |
 
-而以 RDX 寄存器作为基址时，对应的机器码长度为 4：
+而以 RDX 寄存器作为基址时，对应的机器码长度仅为 4：
 
 | 汇编指令 | 机器码 | 长度 |
 | :- | :- | :- |
