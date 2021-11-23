@@ -4,21 +4,25 @@
 
 ## 简介
 
-本次实验尝试制作了 Windows 10 操作系统下的最小 64 位 PE 文件，该文件可以弹出带有文字提示的消息框，且满足实验要求中的三项限制条件。
+本次实验尝试制作了 Windows 10 操作系统下的最小 64 位 PE 文件，该文件可以弹出带有文字提示的消息框，且满足实验的三项限制条件：
 
-本次实验共有九个步骤：
+- 符号通过函数名（而不是函数序号）引入
+- 消息框的标题和内容字符串的长度为 64 字节
+- 总文件大小不超过 300 字节
+
+经过九个步骤后，最终制作出了 268 字节的 PE 文件。
+
+实验步骤如下：
 
 - 第一步：使用常规方法，利用 C 语言编写程序，使用 MSVC 编译器生成普通的 PE 文件。
 - 第二步：通过改变 MSVC 编译器编译时的选项，减小生成的 PE 文件大小。
 - 第三步：使用 [PE Tools](https://petoolse.github.io/petools/) 查看上一步产生的 PE 文件的内部结构，将其中一些明显无用的部分置零。此时文件大小并没有减小，但文件内部有了更多的零，这让后续步骤有了更多的压缩空间。
 - 第四步：在 PE 文件的内部结构中，MS-DOS stub 也是无用的部分，所以使用二进制编辑器手动将这部分内容置零。这一步也给了后续步骤更多的压缩空间。
-- 第五步：详细分析 PE 文件的内部结构，了解 PE 文件中各部分的含义，然后使用汇编语言手动编写一个相同的 PE 文件。虽然这一步生成的文件和上一步相比没有区别，但使用汇编语言后，后续步骤就无需修改机器码，而可以在汇编代码上作修改，从而更简便地减小文件大小。
+- 第五步：详细分析 PE 文件的内部结构，理解 PE 文件中各部分的含义，然后使用汇编语言手动编写一个相同的 PE 文件。虽然这一步生成的文件和上一步相比没有区别，但使用汇编语言后，后续步骤就无需修改二进制文件本身，而可以在汇编代码上作修改，从而更简便地减小文件大小。
 - 第六步：根据对 PE 文件内部结构的分析，从汇编代码上删除所有可以直接删除的无用部分，从而减小文件大小。
-- 第七步：虽然在上一步中删除了所有可以直接删除的无用部分，但还有一些无用字段不可以被直接删除。这是因为 PE 文件含有多个文件头，这些无用字段位于文件头中，而文件头的格式是固定的，也就是说即使文件头中的某个字段没有被使用，它也要在文件头中占据相应的位置，所以不能直接删除。为此，可以采取重叠的方法，通过精心选取合适的重叠方式，将多个文件头重叠在一起，并保证重叠之后，每个重叠的位置最多只能有一个文件头是有用字段。这样就可以在不破坏文件头的前提下，有效地减小文件大小。
-- 第八步：PE 文件中还含有五条指令的机器码，如果将这五条指令的机器码也按上一步的方法与文件头重叠，就可以进一步减小文件的大小。但是，指令的机器码太长，没有办法做到「见缝插针」，放入文件头无用字段的空隙中。为此，想到可以将五条指令拆开，并在前四条指令的后面加一条短跳转指令跳到下一条指令的位置，这样每条指令就可以作为一个独立的部分插入到不同的空隙中了。然而，即使这样做仍然有两条指令太长，没有办法插入空隙。这时，通过对 x64 指令集的充分学习和深刻掌握，想到利用程序运行时的一个性质，在这两条指令以另一个寄存器作为基址时，对应的机器码更短，而指令结果不变。这样机器码也插入到了文件头无用字段的空隙中，从而进一步减小了文件大小。
+- 第七步：虽然在上一步中删除了所有可以直接删除的无用部分，但还有一些无用字段不可以被直接删除。这是因为 PE 文件含有多个文件头，这些无用字段位于文件头中，而文件头的格式是固定的，也就是说即使文件头中的某个字段没有被使用，它也要在文件头中占据相应的位置，所以不能直接删除。为此，可以采取重叠的方法，通过精心选取合适的重叠方式，将多个文件头重叠在一起，并保证重叠之后，每个重叠的位置最多只能对应一个有用字段。这样就可以在不破坏文件头的前提下，有效地减小文件大小。
+- 第八步：PE 文件中还含有五条指令的机器码，如果将这五条指令的机器码也按上一步的方法与文件头重叠，就可以进一步减小文件的大小。但是，指令的机器码太长，没有办法做到「见缝插针」，放入文件头无用字段的空隙中。为此，想到可以将五条指令拆开，并在前四条指令的后面分别加一条短跳转指令跳到下一条指令的位置，这样每条指令就可以作为一个独立的部分插入到不同的空隙中了。然而，即使这样做仍然有两条指令太长，没有办法插入空隙。这时，通过对 x64 指令集的深入学习和充分掌握，想到在这两条指令以另一个寄存器作为基址时，可以使对应的机器码更短，而指令结果不变。这样机器码也插入到了文件头无用字段的空隙中，从而进一步减小了文件大小。
 - 第九步：删除文件末尾的 0，因为程序加载时会在末尾自动填充零。
-
-经过以上九个步骤，最终制作出了 268 字节的 PE 文件。
 
 | 步骤 | 文件大小（字节） | 熵 |
 | :- | :- | :- |
@@ -32,13 +36,7 @@
 | 8 | 280 | 2.620173 |
 | 9 | 268 | 2.667864 |
 
-## 实验要求
-
-制作 Windows 10 操作系统下的最小 64 位 PE 文件，该文件可以弹出带有文字提示的消息框，且满足：
-
-* 符号通过函数名（而不是函数序号）引入
-* 消息框的标题和内容字符串的长度为 64 字节
-* 总文件大小不超过 300 字节
+在有的步骤中，虽然文件大小没有减小，但文件的熵减小了，这说明文件内部有更多的零，也就说明后续步骤有更多的压缩空间。
 
 ## 实验环境
 
@@ -51,15 +49,13 @@
 
 ## 实验步骤
 
-### 步骤一
+**第一步：使用常规方法，利用 C 语言编写程序，使用 MSVC 编译器生成普通的 PE 文件。**
 
-> 使用 C 语言调用 Windows API，并使用 MSVC 编译器编译生成 PE 文件，实现弹出消息框的功能
+在 Windows 编程中，要弹出消息框，可以使用 [`MessageBoxA`](https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-messageboxa) 或 [`MessageBoxW`](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw) 这两个函数。其中，函数名以 A 结尾表示字符编码使用用户的当前代码页，以 W 结尾表示使用 UTF-16。
 
-Windows API 中的 `MessageBoxW` 函数参考了 [MessageBoxW function](https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-messageboxw)。
+由于用户使用的代码页并不统一，出于兼容性的考虑，本次实验使用以 W 结尾的 `MessageBoxW` 函数。代码页的问题其实非常常见，相信许多人在 Windows 上使用 Python 编程时，都遇到过因为代码页不对而导致程序乱码或崩溃的问题。这里使用 `MessageBoxW` 函数，与代码页无关，所以可以避免程序乱码或崩溃。
 
-在 Windows 编程中，函数名以 A 结尾表示字符编码使用用户的当前代码页，以 W 结尾表示使用 UTF-16。由于目前用户使用的代码页并不统一，出于兼容性的考虑，使用 W 结尾的 `MessageBoxW` 函数。
-
-将以下代码保存为 `tiny.c`：
+编写的 C 语言代码 `tiny.c` 如下：
 
 ```c
 #include <Windows.h>
@@ -73,10 +69,12 @@ int main() {
 }
 ```
 
+接下来将 C 语言代码编译为 PE 文件。
+
 安装 Visual Studio Build Tools 2019 后，「开始」菜单中会出现 Visual Studio 2019 文件夹。点击其中的 x64 Native Tools Command Prompt for VS 2019 打开命令行，切换到当前目录后，输入以下命令：
 
 ```cmd
-$ cl /O1 /source-charset:utf-8 tiny.c /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup user32.lib
+> cl /O1 /source-charset:utf-8 tiny.c /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup user32.lib
 Microsoft (R) C/C++ Optimizing Compiler Version 19.22.27905 for x64
 Copyright (C) Microsoft Corporation.  All rights reserved.
 
@@ -93,17 +91,13 @@ tiny.obj
 
 编译生成 `tiny.exe` 文件，可以正常运行：
 
-![Run `tiny1.exe`](images/tiny1.exe.png)
+![](images/tiny1.exe.png)
 
-**文件大小 94208 字节，熵 5.924863**
+**第二步：通过改变 MSVC 编译器编译时的选项，减小生成的 PE 文件大小。**
 
-### 步骤二
+参考 [Minimize the size of your program – high level](https://blogs.msdn.microsoft.com/xiangfan/2008/09/19/minimize-the-size-of-your-program-high-level/) 和 [Linker Options](https://docs.microsoft.com/en-us/cpp/build/reference/linker-options?view=vs-2019) 可知，通过修改 C 语言代码和编译选项，可以减小编译生成的 PE 文件大小。
 
-> 修改 MSVC 编译器的编译选项，减小生成的 PE 文件大小
-
-此步骤主要参考了 [Minimize the size of your program – high level](https://blogs.msdn.microsoft.com/xiangfan/2008/09/19/minimize-the-size-of-your-program-high-level/) 和 [Linker Options](https://docs.microsoft.com/en-us/cpp/build/reference/linker-options?view=vs-2019)。
-
-将以下代码保存为 `tiny.c`：
+修改后的 C 语言代码 `tiny.c` 如下：
 
 ```c
 #include <Windows.h>
@@ -119,7 +113,7 @@ void _() {
 使用以下命令行选项编译：
 
 ```cmd
-$ cl /O1 /MD /GS- /source-charset:utf-8 tiny.c /link /NOLOGO /NODEFAULTLIB /SUBSYSTEM:WINDOWS /ENTRY:_ /MERGE:.rdata=. /MERGE:.pdata=. /MERGE:.text=. /SECTION:.,ER /ALIGN:16 user32.lib
+> cl /O1 /MD /GS- /source-charset:utf-8 tiny.c /link /NOLOGO /NODEFAULTLIB /SUBSYSTEM:WINDOWS /ENTRY:_ /MERGE:.rdata=. /MERGE:.pdata=. /MERGE:.text=. /SECTION:.,ER /ALIGN:16 user32.lib
 Microsoft (R) C/C++ Optimizing Compiler Version 19.22.27905 for x64
 Copyright (C) Microsoft Corporation.  All rights reserved.
 
@@ -130,15 +124,13 @@ LINK : warning LNK4254: section '.text' (60000020) merged into '.' (40000040) wi
 
 编译生成 `tiny.exe` 文件，可以正常运行。
 
-**文件大小 896 字节，熵 3.567715**
-
-### 步骤三
-
-> 利用 [PE Tools](https://petoolse.github.io/petools/) 初步分析生成的 PE 文件，清除无用的 `TimeDateStamp` 字段、Rich header 和 debug directory
+**第三步：使用 [PE Tools](https://petoolse.github.io/petools/) 查看上一步产生的 PE 文件的内部结构，将其中一些明显无用的部分置零。此时文件大小并没有减小，但文件内部有了更多的零，这让后续步骤有了更多的压缩空间。**
 
 打开 PE Tools (v1.9.762.2018)，单击“PE Editor”，然后打开 `tiny.exe`。
 
-![Open `tiny2.exe` by PE Tools](images/tiny2.exe.png)
+![](images/tiny2.exe.png)
+
+找到以下三个部分，并置零：
 
 * 点击“File Header”，找到“Time/Date”，设置为 0
 * 点击“View Rich”，然后点击“Clear Sign”
@@ -146,18 +138,18 @@ LINK : warning LNK4254: section '.text' (60000020) merged into '.' (40000040) wi
 
 修改后的 `tiny.exe` 文件可以正常运行。
 
-**文件大小 896 字节，熵 2.220567**
+**第四步：在 PE 文件的内部结构中，MS-DOS stub 也是无用的部分，所以使用二进制编辑器手动将这部分内容置零。这一步也给了后续步骤更多的压缩空间。**
 
-### 步骤四
+使用二进制编辑器打开 `tiny.exe`。
 
-> 利用二进制编辑器手动删除无用的 MS-DOS stub
+定位到以下部分，并置零：
 
-使用二进制编辑器打开  `tiny.exe`。
+- 将 `0x02-0x3b` 置零
+- 将 `0x40-0x7f` 置零
 
-* 将 0x02-0x3b 设置为 0（0x00-0x01 为 `e_magic`，0x3c-0x3f 为 `e_lfanew`）
-* 将 0x40-0x7f 设置为 0
+这里需要注意，`0x00-0x01` 是 `e_magic`，`0x3c-0x3f` 是 `e_lfanew`，它们都是有用的字段，所以没有置零。
 
-修改后的 `tiny.exe` 文件可以正常运行，其内容应当如下：
+修改后的 `tiny.exe` 文件可以正常运行，内容如下：
 
 ```zsh
 $ xxd -p tiny.exe
@@ -195,27 +187,23 @@ ff488d151cffffff33c948ff25d3feffffcccccc48030000000000000000
 
 可以使用 `xxd -p -r` 将以上文本转换回二进制文件。
 
-**文件大小 896 字节，熵 1.608427**
+**第五步：详细分析 PE 文件的内部结构，理解 PE 文件中各部分的含义，然后使用汇编语言手动编写一个相同的 PE 文件。虽然这一步生成的文件和上一步相比没有区别，但使用汇编语言后，后续步骤就无需修改二进制文件本身，而可以在汇编代码上作修改，从而更简便地减小文件大小。**
 
-### 步骤五
+在理解 PE 文件的结构时，主要参考了以下资料：
 
-> 详细分析修改后的 PE 文件的各字段，然后使用汇编语言手动构造该 PE 文件，并使用伪指令替换硬编码的数值（例如使用 `$-$$` 替换文件大小）
+- 总述：[PE Format](https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format)，[x86 Disassembly/Windows Executable Files](https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files)，[Portable Executable File Format](https://blog.kowalczyk.info/articles/pefileformat.html)
+- Rich header：[The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm)
+- Import address table：[Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872)
 
-PE 文件的结构主要参考了以下资料：
+另外，在理解 PE 文件的结构时，还使用了 [PE Tools](https://petoolse.github.io/petools/) 和 [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php) 这两个工具。
 
-* 总述：[PE Format](https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format)，[x86 Disassembly/Windows Executable Files](https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files)，[Portable Executable File Format](https://blog.kowalczyk.info/articles/pefileformat.html)
-* Rich header：[The Undocumented Microsoft "Rich" Header](http://bytepointer.com/articles/the_microsoft_rich_header.htm)
-* Import address table：[Import table vs Import Address Table](https://reverseengineering.stackexchange.com/a/16872)
+在理解 PE 文件的结构后，使用汇编语言手动编写一个相同的 PE 文件。
 
-在理解 PE 文件的结构时，主要使用的工具有 [PE Tools](https://petoolse.github.io/petools/) 和 [PE Disassembler viewer](http://www.codedebug.com/php/Products/Products_NikPEViewer_20v.php)。
+注意在使用 NASM 汇编器时，根据[官方文档](https://www.nasm.us/doc/nasmdoc3.html#section-3.2.1)，分别使用伪指令 `db`、`dw`、`dd`、`dq` 声明 1、2、4、8 字节的数据。
 
-根据 NASM 汇编器的 [官方文档](https://www.nasm.us/doc/nasmdoc3.html#section-3.2.1)，分别使用伪指令 `db`、`dw`、`dd`、`dq` 声明 1、2、4、8 字节的数据。
+此外，在编写汇编语言时，要特别注意不能使用硬编码的数值，而是要使用伪指令计算得出相应的数值。例如，文件大小的数值 `0x0380` 使用 `file_size equ $-$$` 替换，机器指令 `0x41b940002400` 使用 `mov r9d, 0x00240040` 替换。这是因为如果使用了硬编码的数值，后续步骤中 PE 文件的结构发生变化时，这些数值并不会随之改变，文件就会损坏。
 
-在编写汇编语言时，要特别注意不能使用硬编码的数值，而是要使用伪指令计算得出相应的数值。这是因为如果使用了硬编码的数值，后续步骤中程序结构发生变化时，这些数值并不会随之改变，这样文件就会损坏。
-
-使用伪指令替换硬编码的数值。例如，文件大小的数值为 0x0380，使用 `file_size equ $-$$` 替换；机器指令 0x41b940002400 使用 `mov r9d, 0x00240040` 替换。
-
-编写的 `stretch.asm` 如下所示：
+编写的汇编语言文件 `stretch.asm` 如下：
 
 ```assembly
 BITS 64
@@ -421,7 +409,7 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 编译生成 `stretch.exe`，可以正常运行。
 
-虽然 `stretch.exe` 是参照 `tiny.exe` 手动编写的，但是二者略有区别：
+这时发现，虽然 `stretch.exe` 是参照 `tiny.exe` 手动编写的，理论上应该完全相同，但是实际上两者略有区别：
 
 ```zsh
 $ diff =(xxd step4/tiny.exe) =(xxd step5/stretch.exe)
@@ -431,7 +419,7 @@ $ diff =(xxd step4/tiny.exe) =(xxd step5/stretch.exe)
 > 00000310: 1cff ffff 31c9 ff25 d4fe ffff cccc cccc  ....1..%........
 ```
 
-`xor ecx, ecx` 指令在 `tiny.exe` 中由机器码 0x33c9 表示，而在 `stretch.exe` 中由 0x31c9 表示。由 [XOR — Logical Exclusive OR](https://www.felixcloutier.com/x86/xor) 可知，这是由于指令编码方式不同，不影响指令的效果：
+`xor ecx, ecx` 指令在 `tiny.exe` 中以机器码 `0x33c9` 表示，而在 `stretch.exe` 中以 `0x31c9` 表示。由 [XOR — Logical Exclusive OR](https://www.felixcloutier.com/x86/xor) 可知，这是由于指令编码方式不同，不影响指令的效果：
 
 ```zsh
 $ echo 33c9 | xxd -p -r - | ndisasm -b 64 -
@@ -440,7 +428,7 @@ $ echo 31c9 | xxd -p -r - | ndisasm -b 64 -
 00000000  31C9              xor ecx,ecx
 ```
 
-`jmp [rel iatbl]` 指令在 `tiny.exe` 中由机器码 0x48ff25d3feffff 表示，而在 `stretch.exe` 中由 0xff25d4feffff 表示。这两条指令的跳转地址没有差别：
+`jmp [rel iatbl]` 指令在 `tiny.exe` 中以机器码 `0x48ff25d3feffff` 表示，而在 `stretch.exe` 中以 `0xff25d4feffff` 表示。这两条指令的跳转地址没有区别：
 
 ```zsh
 $ echo 48ff25d3feffff | xxd -p -r - | ndisasm -b 64 -
@@ -449,15 +437,19 @@ $ echo ff25d4feffff | xxd -p -r - | ndisasm -b 64 -
 00000000  FF25D4FEFFFF      jmp [rel 0xfffffffffffffeda]
 ```
 
-由 Stack Overflow 上的 [一个回答](https://stackoverflow.com/a/36800114) 可知，机器码中的 48 前缀表示 REX.W，会被处理器忽略；这一前缀可能与 Windows x64 的 unwind data 有关。而且从运行结果看，这一修改不影响指令的效果。
+由 Stack Overflow 上的[一个回答](https://stackoverflow.com/a/36800114) 可知，机器码中的 `48` 前缀表示 REX.W，会被处理器忽略。这一前缀可能与 Windows x64 的 unwind data 有关。不论如何，从运行结果上看，这一修改不影响指令的效果。
 
-**文件大小 896 字节，熵 1.607880**
+由此可知，这一步使用汇编语言编写的 `stretch.exe` 和上一步的 `tiny.exe` 是等价的。
 
-### 步骤六
+**第六步：根据对 PE 文件内部结构的分析，从汇编代码上删除所有可以直接删除的无用部分，从而减小文件大小。**
 
-> 删除无用的 DOS stub、Rich header 和 debug table；对于 optional header 的 data directories 中的 16 项，仅保留前 2 项，并将 `NumberOfRvaAndSizes` 设置为 2；删除 `itbl` 后用于对齐的字节
+删除的部分如下：
 
-将修改后的结果保存为 `stretch.asm`：
+- 删除 DOS stub、Rich header 和 debug table
+- 对于 optional header 的 data directories 中的 16 项，仅保留前 2 项，并将 `NumberOfRvaAndSizes` 设置为 2
+- 删除 `itbl` 后用于对齐的字节
+
+修改后的 `stretch.asm` 如下：
 
 ```zsh
 $ diff step5/stretch.asm step6/stretch.asm
@@ -518,21 +510,13 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 编译生成 `stretch.exe`，可以正常运行。
 
-**文件大小 448 字节，熵 2.653766**
+**第七步：虽然在上一步中删除了所有可以直接删除的无用部分，但还有一些无用字段不可以被直接删除。这是因为 PE 文件含有多个文件头，这些无用字段位于文件头中，而文件头的格式是固定的，也就是说即使文件头中的某个字段没有被使用，它也要在文件头中占据相应的位置，所以不能直接删除。为此，可以采取重叠的方法，通过精心选取合适的重叠方式，将多个文件头重叠在一起，并保证重叠之后，每个重叠的位置最多只能对应一个有用字段。这样就可以在不破坏文件头的前提下，有效地减小文件大小。**
 
-### 步骤七
+要判断一个字段究竟是有用字段还是无用字段，可以逐个修改 `stretch.asm` 中每个字段的值，比如修改为 0。如果修改以后程序出现问题，则说明该字段是有用字段，否则是无用字段。
 
-> 通过将各字段的值修改为其他值后，观察程序的行为是否受到影响，进一步得出文件中的无用字段，将有作用的字段与无用字段重叠
+判断出有用字段和无用字段后，可以将有用字段与无用字段相互重叠，从而减小文件大小。例如，将 PE header 的起始位置设置为 DOS header 的 `0x04` 处，可以将两个文件头的字段重叠。重叠时可能存在多种方法，本次实验只选择其中一种方法。
 
-逐个修改 `stretch.asm` 中每个字段的值，例如修改为 0。如果修改后程序无法运行，或运行时发生异常，或显示的内容不正确，则认为该字段是有作用的字段；如果修改后程序仍能正常运行，则认为该字段是无用字段。
-
-将有作用的字段无用字段与重叠，例如将 PE header 的起始位置设置为 DOS header 的 0x04 处，可以将两个文件头的字段重叠，缩小文件大小。
-
-某些位置在两个文件头中均为无用字段，可以进一步将文件的后续部分与这些无用字段重叠。
-
-重叠时可能存在多种方法，本次实验只选择其中一种方法。如果有作用的字段已经不能与剩余的无用字段重叠（例如有作用的字段占 16 字节，而无用字段只有 8 个字节），说明重叠完成。
-
-另外，Import table 和 DLLFuncEntry 都是有用字段，但是两者可以重叠，这是因为 Import table 只在程序加载前使用，DLLFuncEntry 只在程序加载后使用。
+另外，虽然 Import table 和 DLLFuncEntry 都是有用字段，但是两者可以重叠。这是因为 Import table 只在程序加载前使用，DLLFuncEntry 只在程序加载后使用，所以并不会产生冲突。
 
 重叠后的 `stretch.asm` 如下：
 
@@ -660,13 +644,9 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 编译生成 `stretch.exe`，可以正常运行。
 
-**文件大小 308 字节，熵 2.473451**
+**第八步：PE 文件中还含有五条指令的机器码，如果将这五条指令的机器码也按上一步的方法与文件头重叠，就可以进一步减小文件的大小。但是，指令的机器码太长，没有办法做到「见缝插针」，放入文件头无用字段的空隙中。为此，想到可以将五条指令拆开，并在前四条指令的后面分别加一条短跳转指令跳到下一条指令的位置，这样每条指令就可以作为一个独立的部分插入到不同的空隙中了。然而，即使这样做仍然有两条指令太长，没有办法插入空隙。这时，通过对 x64 指令集的深入学习和充分掌握，想到在这两条指令以另一个寄存器作为基址时，可以使对应的机器码更短，而指令结果不变。这样机器码也插入到了文件头无用字段的空隙中，从而进一步减小了文件大小。**
 
-### 步骤八
-
-> 将机器码较长的指令替换为短指令，然后用短跳转指令连接各条指令，分别与无用字段重叠
-
-在上一步骤中，文件的剩余部分已经不能继续重叠，因为最大的无用字段只有 8 个字节，而文件的剩余部分均大于 8 个字节。例如机器码占 28 字节：
+在上一步骤中，能重叠的字段都已经被重叠了，而指令的机器码还没有作过变化：
 
 ```zsh
 $ grep -A 5 entry: stretch.lst
@@ -678,46 +658,53 @@ $ grep -A 5 entry: stretch.lst
     99 0000010A FF2584FFFFFF                jmp [rel iatbl]         ; MessageBoxW
 ```
 
-其中，前四条指令用于函数调用的参数传递。根据 [x64 calling convention](https://docs.microsoft.com/en-us/cpp/build/x64-calling-convention?view=vs-2019)，在 Windows x64 中，函数的前四个参数分别使用 RCX、RDX、R8 和 R9 传递，只有当参数大于四个时才使用堆栈传递。`MessageBoxW` 的 `hWnd` 和 `uType` 两个参数的长度为 32 位而非 64 位，因此要将 RCX 替换为 ECX，R9 替换为 R9D。
+其中，前四条指令用于函数调用的参数传递。根据 [x64 calling convention](https://docs.microsoft.com/en-us/cpp/build/x64-calling-convention?view=vs-2019)，在 Windows x64 中，函数的前四个参数分别使用 RCX、RDX、R8 和 R9 传递，只有当参数大于四个时才使用堆栈传递。`MessageBoxW` 的 `hWnd` 和 `uType` 两个参数的长度为 32 位而非 64 位，因此要将 RCX 替换为 ECX，R9 替换为 R9D。第五条指令是跳转指令。为了减小 PE 文件的大小，不必处理 `MessageBoxW` 函数的返回值，直接使用 `jmp` 指令跳转到目标函数。
 
-第五条指令是跳转指令。为了减小 PE 文件的大小，不必处理 `MessageBoxW` 函数的返回值，直接使用 `jmp` 指令跳转到目标函数。
-
-由 [JMP — Jump](https://www.felixcloutier.com/x86/jmp) 可知，短跳转指令的跳转范围为 –128 至 +127，机器码只占 2 个字节。因此，可以将每条指令作为单独的部分，再用短跳转指令连接各条指令。但是，两条 `lea` 指令的机器码仍占 9 个字节：
+这第五条指令的机器码作为一个整体共占 28 字节，但上一步经过一番重叠，最大的无用字段也只有 8 字节。因此，没有办法做到「见缝插针」，将机器码放入文件头无用字段的空隙中。这时，想到可以将指令拆开，然后在前四条指令的后面分别加一条短跳转指令跳到下一条指令的位置。由 [JMP — Jump](https://www.felixcloutier.com/x86/jmp) 可知，短跳转指令的跳转范围为 –128 至 +127，机器码只占 2 个字节，所以这种做法是可行的。
 
 | 汇编指令 | 机器码长度 |
 | :- | :- |
-| `mov r9d, 0x00240040` then `jmp` | 8 |
-| `lea r8, [rel title]` then `jmp` | 9 |
-| `lea rdx, [rel content]` then `jmp` | 9 |
-| `xor ecx, ecx` then `jmp` | 4 |
+| `mov r9d, 0x00240040` + `jmp` | 8 |
+| `lea r8, [rel title]` + `jmp` | 9 |
+| `lea rdx, [rel content]` + `jmp` | 9 |
+| `xor ecx, ecx` + `jmp` | 4 |
 | `jmp [rel iatbl]` | 6 |
+
+但是，通过上表可以看出，两条 `lea` 指令的机器码仍占 9 个字节。而上面提到，最大的无用字段也只有 8 字节，所以对于这两条指令，仍然没办法做到「见缝插针」。
 
 在 [x64dbg](https://x64dbg.com/) 中调试时发现，当程序执行到用户代码的入口点时，RDX 寄存器的值会被设置为入口地址：
 
-![View RDX in x64dbg](images/rdx.png)
+![](images/rdx.png)
 
-通过修改汇编可以发现，在 `lea` 指令中，如果将 RDX 寄存器作为基址，生成的机器码更短：
+这时，通过对 x64 指令集的深入学习和充分掌握，立即意识到在 `lea` 指令中，如果以 RDX 寄存器作为基址，可以使对应的机器码更短。RDX 寄存器的值会被设置为入口地址，也就是说 RDX 寄存器的值不是随机的，也就具备了作基址的条件。
+
+在原来的程序中，以 RIP 寄存器作为基址，对应的机器码长度为 7：
 
 | 汇编指令 | 机器码 | 长度 |
 | :- | :- | :- |
 | `lea r8, [rip-0x4d]` | 0x4c8d05b3ffffff | 7 |
-| `lea r8, [rdx-0x4d]` | 0x4c8d42b3 | 4 |
 | `lea rdx, [rip-0x44]` | 0x488d15bcffffff | 7 |
+
+而以 RDX 寄存器作为基址时，对应的机器码长度为 4：
+
+| 汇编指令 | 机器码 | 长度 |
+| :- | :- | :- |
+| `lea r8, [rdx-0x4d]` | 0x4c8d42b3 | 4 |
 | `lea rdx, [rdx-0x44]` | 0x488d52bc | 4 |
 
-因此，可以利用程序的这一行为缩短 `lea` 指令。修改后的汇编指令如下：
+因此，将两条 `lea` 指令改为以 RDX 寄存器作为基址。修改后的汇编指令如下：
 
 | 汇编指令 | 机器码长度 |
 | :- | :- |
-| `mov r9d, 0x00240040` then `jmp` | 8 |
-| `lea r8, [rdx+title-entry]` then `jmp` | 6 |
-| `lea rdx, [rdx+content-entry]` then `jmp` | 6 |
-| `xor ecx, ecx` then `jmp` | 4 |
+| `mov r9d, 0x00240040` + `jmp` | 8 |
+| `lea r8, [rdx+title-entry]` + `jmp` | 6 |
+| `lea rdx, [rdx+content-entry]` + `jmp` | 6 |
+| `xor ecx, ecx` + `jmp` | 4 |
 | `jmp [rel iatbl]` | 6 |
 
-这样就可以与无用字段重叠。
+这样就可以与无用字段重叠了。
 
-将修改后的结果保存为 `stretch.asm`：
+修改后的 `stretch.asm` 如下：
 
 ```assembly
 BITS 64
@@ -849,11 +836,7 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 编译生成 `stretch.exe`，可以正常运行。
 
-**文件大小 280 字节，熵 2.620173**
-
-### 步骤九
-
-> 删除文件末尾的 0
+**第九步：删除文件末尾的 0，因为程序加载时会在末尾自动填充零。**
 
 程序加载时会在末尾自动填充 0，因此文件末尾的 0 可以删去。
 
@@ -875,7 +858,9 @@ $ diff step8/stretch.asm step9/stretch.asm
 $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 ```
 
-编译生成 `stretch.exe`，可以正常运行。
+编译生成 `stretch.exe`，可以正常运行：
+
+![](images/tiny1.exe.png)
 
 ```zsh
 $ xxd stretch.exe
@@ -897,8 +882,6 @@ $ xxd stretch.exe
 000000f0: 3000 0000 0801 0000 0000 0000 31c9 eb9e  0...........1...
 00000100: 7c00 0000 9400 0000 0a00 0000            |...........
 ```
-
-**文件大小 268 字节，熵 2.667864**
 
 ## 参考资料
 
