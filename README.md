@@ -6,25 +6,25 @@ Chinese Version: [Post on Zhihu](https://www.zhihu.com/question/21715980/answer/
 
 ## Introduction
 
-This experiment aims to create the minimal 64-bit [Portable Executable](https://en.wikipedia.org/wiki/Portable_Executable) (PE) file that displays a message box on Windows 10.
+This experiment aims to produce a minimal 64-bit [Portable Executable](https://en.wikipedia.org/wiki/Portable_Executable) (PE) file on the Windows 10 operating system that can pop up a message box with a text prompt and meet the three requirements of the experiment:
 
-In this experiment a 268-byte PE file is created, which works normally to display a message box with characters, while meeting the requirements below:
+- Symbols should be imported by name (instead of ordinal)
+- Total length of message box title and content should be 64 bytes
+- File size should less than 300 bytes
 
-* Symbols should be imported by name (instead of ordinal)
-* Total length of message box title and content should be 64 bytes
-* File size should less than **300 bytes**
+After nine steps, a PE file of 268 bytes was produced.
 
-The process of this experiment is:
+The steps of the experiment were as follows:
 
-1. Call Windows API to display a message box in C. Generate PE file with MSVC compiler
-1. Change the command line options of MSVC compiler to reduce the size of the generated file
-1. Roughly analyse the generated PE file by [PE Tools](https://petoolse.github.io/petools/). Clean the unused `TimeDateStamp` field, Rich header and debug directory
-1. Clean the unused MS-DOS stub by hex editor
-1. Analyse the fields of PE file in detail. Reconstruct the file manually by assembly. Substitute hard-coded values by pseudo instructions (e.g. substitute the size of file by `$-$$`)
-1. Remove unused DOS stub, Rich header and debug table. For the 16 entries in data directories of optional header, only keep the first 2 entries, and set `NumberOfRvaAndSizes` to 2. Remove the padding bytes after `itbl`
-1. Change the value of each fields to other values and see if the behaviour of the program is affected, in such way further determine the unused fields. Overlap used fields with unused fields
-1. Substitute the instructions that produce long machine code with shorter instructions. Split the instructions and connect them with short jump. Overlap the instructions with unused fields
-1. Remove trailing zeros of the file
+- Step 1: Using the ordinary method, write a program in C and use the MSVC compiler to generate a normal PE file.
+- Step 2: Reduce the size of the generated PE file by changing the command line options of the MSVC compiler.
+- Step 3: Examine the PE file generated in the previous step using [PE Tools](https://petoolse.github.io/petools/). Set the apparently unused parts to zero. At this point the file size has not been reduced, but there are more zeros in the file, which leaves more room for compression in subsequent steps.
+- Step 4: In the PE file, the MS-DOS stub is also an unused part, so use a binary editor to zero out this part manually. This step also leaves more room for compression in subsequent steps.
+- Step 5: Analyse the structure of the PE file in detail, master the function of each part. Then manually create an identical PE file using assembly. Although the file generated in this step is no different from the previous one, using assembly makes it easier to reduce the file size by making changes to the assembly code in subsequent steps instead of modifying the binary file itself.
+- Step 6: Based on the analysis of the structure of the PE file, remove all of the unused parts from the assembly code, thus reducing the file size.
+- Step 7: Although all of the unused parts were removed in the previous step, there are still some unused fields that cannot be removed directly. This is because PE files contain multiple headers and the unused fields are parts of these file headers. Since the formats of the headers are fixed, even if a field in the header is unused, it still has to occupy the space in the header and therefore cannot be deleted directly. To address this issue, the approach of overlapping can be adopted, in which multiple file headers are overlapped together by carefully selecting the starting position of the file headers and ensuring that after overlapping, each overlapping position can only correspond to at most one used field. This allows the file size to be reduced effectively without breaking the file headers.
+- Step 8: The PE file also contains machine code of five instructions. If the machine code of these five instructions is also overlapped with the file header as in the previous step, the file size can be further reduced. However, the machine code of the instructions is too long to fit into the gaps of the unused fields in the file headers. To solve this problem, a possible solution is to split the five instructions apart and add a short jump instruction to each of the first four instructions to jump to the next instruction, so that each instruction can be inserted into a different gap. However, even with this approach there are still two instructions that are too long to be inserted into the gap. At this moment, with my in-depth study and full mastery of the x64 instruction set, it occurs to me that the machine code of these two instructions can be shortened without changing the semantics when these two instructions use the value of another register as their base address. In this way, the machine code is also inserted into the gaps of the unused fields, thus further reducing the file size.
+- Step 9: Remove the zeros at the end of the file, as the file is automatically filled with zeros when the program is being loaded.
 
 | Step | File Size (bytes) | Entropy |
 | :- | :- | :- |
@@ -38,7 +38,7 @@ The process of this experiment is:
 | 8 | 280 | 2.620173 |
 | 9 | 268 | 2.667864 |
 
-In step 1 a plain PE file is produced by plain C, which is used to compare with the PE files in later steps. In step 2 compile options are used to reduce the size of the PE file. In step 3 and 4, although the size of file is not reduced, the entropy of the file is reduced, which means there are more zeros in the file, and there are more room to shrink. From step 5 a PE file is constructed by assembly. The file size is effectively reduced by removing, overlapping and splitting the fields and instructions.
+In steps 3-5, although the file size is not reduced, the entropy of the file decreases, which indicates that there are more zeros inside the file, and hence more room for compression in subsequent steps.
 
 ## Environment
 
