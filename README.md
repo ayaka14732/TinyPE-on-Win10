@@ -12,7 +12,7 @@ This experiment aims to produce a minimal 64-bit [Portable Executable](https://e
 - Total length of message box title and content should be 64 bytes
 - File size should less than 300 bytes
 
-After nine steps, a PE file of 268 bytes was produced.
+After 9 steps, a PE file of 268 bytes was produced.
 
 The steps of the experiment were as follows:
 
@@ -51,9 +51,7 @@ In steps 3-5, although the file size is not reduced, the entropy of the file dec
 
 ## Steps
 
-### Step 1
-
-> Call Windows API to display a message box in C. Generate PE file with MSVC compiler
+**Step 1: Using the ordinary method, write a program in C and use the MSVC compiler to generate a normal PE file.**
 
 The usage Windows API function `MessageBoxW` referenced [MessageBoxW function](https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-messageboxw).
 
@@ -95,11 +93,7 @@ The compilation yields `tiny.exe`, which runs normally.
 
 ![Run `tiny1.exe`](images/tiny1.exe.png)
 
-**File size 94208 bytes. Entropy 5.924863**
-
-### Step 2
-
-> Change the command line options of MSVC compiler to reduce the size of the generated file
+**Step 2: Reduce the size of the generated PE file by changing the command line options of the MSVC compiler.**
 
 This step mainly referenced [Minimize the size of your program – high level](https://blogs.msdn.microsoft.com/xiangfan/2008/09/19/minimize-the-size-of-your-program-high-level/) and [Linker Options](https://docs.microsoft.com/en-us/cpp/build/reference/linker-options?view=vs-2019).
 
@@ -130,11 +124,7 @@ LINK : warning LNK4254: section '.text' (60000020) merged into '.' (40000040) wi
 
 The compilation yields `tiny.exe`, which runs normally.
 
-**File size 896 bytes. Entropy 3.567715**
-
-### Step 3
-
-> Roughly analyse the generated PE file by [PE Tools](https://petoolse.github.io/petools/). Clean the unused `TimeDateStamp` field, Rich header and debug directory
+**Step 3: Examine the PE file generated in the previous step using [PE Tools](https://petoolse.github.io/petools/). Set the apparently unused parts to zero. At this point the file size has not been reduced, but there are more zeros in the file, which leaves more room for compression in subsequent steps.**
 
 Open PE Tools (v1.9.762.2018). Click "PE Editor", then open `tiny.exe`.
 
@@ -146,11 +136,7 @@ Open PE Tools (v1.9.762.2018). Click "PE Editor", then open `tiny.exe`.
 
 The modified `tiny.exe`runs normally.
 
-**File size 896 bytes. Entropy 2.220567**
-
-### Step 4
-
-> Clean the unused MS-DOS stub by hex editor
+**Step 4: In the PE file, the MS-DOS stub is also an unused part, so use a binary editor to zero out this part manually. This step also leaves more room for compression in subsequent steps.**
 
 Open  `tiny.exe` by hex editor.
 
@@ -195,11 +181,7 @@ ff488d151cffffff33c948ff25d3feffffcccccc48030000000000000000
 
 `xxd -p -r` can be used to convert the above text file back to binary file.
 
-**File size 896 bytes. Entropy 1.608427**
-
-### Step 5
-
-> Analyse the fields of PE file in detail. Reconstruct the file manually by assembly. Substitute hard-coded values by pseudo instructions (e.g. substitute the size of file by `$-$$`)
+**Step 5: Analyse the structure of the PE file in detail, master the function of each part. Then manually create an identical PE file using assembly. Although the file generated in this step is no different from the previous one, using assembly makes it easier to reduce the file size by making changes to the assembly code in subsequent steps instead of modifying the binary file itself.**
 
 The structure of PE files referenced the following contents:
 
@@ -449,11 +431,7 @@ $ echo ff25d4feffff | xxd -p -r - | ndisasm -b 64 -
 
 According to [an answer](https://stackoverflow.com/a/36800114) on Stack Overflow, the 48 prefix in machine code stands for REX.W, which would be ignored by the processor. This prefix may be related to unwind data on Windows x64. In addition, the change do not affect the behaviour of the program.
 
-**File size 896 bytes. Entropy 1.607880**
-
-### Step 6
-
-> Remove unused DOS stub, Rich header and debug table. For the 16 entries in data directories of optional header, only keep the first 2 entries, and set `NumberOfRvaAndSizes` to 2. Remove the padding bytes after `itbl`
+**Step 6: Based on the analysis of the structure of the PE file, remove all of the unused parts from the assembly code, thus reducing the file size.**
 
 Save the modification as `stretch.asm`:
 
@@ -516,15 +494,15 @@ $ nasm -f bin -o stretch.exe -l stretch.lst stretch.asm
 
 The compilation yields `stretch.exe`, which runs normally.
 
-**File size 448 bytes. Entropy 2.653766**
+**Step 7: Although all of the unused parts were removed in the previous step, there are still some unused fields that cannot be removed directly. This is because PE files contain multiple headers and the unused fields are parts of these file headers. Since the formats of the headers are fixed, even if a field in the header is unused, it still has to occupy the space in the header and therefore cannot be deleted directly. To address this issue, the approach of overlapping can be adopted, in which multiple file headers are overlapped together by carefully selecting the starting position of the file headers and ensuring that after overlapping, each overlapping position can only correspond to at most one used field. This allows the file size to be reduced effectively without breaking the file headers.**
 
-### Step 7
+**Step 8: The PE file also contains machine code of five instructions. If the machine code of these five instructions is also overlapped with the file header as in the previous step, the file size can be further reduced. However, the machine code of the instructions is too long to fit into the gaps of the unused fields in the file headers. To solve this problem, a possible solution is to split the five instructions apart and add a short jump instruction to each of the first four instructions to jump to the next instruction, so that each instruction can be inserted into a different gap. However, even with this approach there are still two instructions that are too long to be inserted into the gap. At this moment, with my in-depth study and full mastery of the x64 instruction set, it occurs to me that the machine code of these two instructions can be shortened without changing the semantics when these two instructions use the value of another register as their base address. In this way, the machine code is also inserted into the gaps of the unused fields, thus further reducing the file size.**
 
----
+**Step 9: Remove the zeros at the end of the file, as the file is automatically filled with zeros when the program is being loaded.**
 
 ## References
 
-Besides the references declared above, this experiment also referenced the following contents:
+In addition to the references already described above, the following sources were consulted in this experiment:
 
 1. [Tiny PE](http://www.phreedom.org/research/tinype/)
 1. [Writing ultra-small Windows executables](https://keyj.emphy.de/win32-pe/)
