@@ -4,13 +4,13 @@ Chinese Version: [Post on Zhihu](https://www.zhihu.com/question/21715980/answer/
 
 ## Introduction
 
-In this experiment, I crafted the smallest possible 64-bit PE file on the Windows 10 operating system. This file successfully displays a message box with a text prompt, while meeting three specific requirements:
+In this experiment, I set out to craft the smallest possible 64-bit PE file on the Windows 10 operating system while meeting the following three challenging requirements:
 
-- Symbols should be imported by name instead of ordinal
-- The total length of the title and content of the message box should be 64 bytes long
-- The overall file size should not exceed 300 bytes
+1. The file must successfully display a message box with a text prompt.
+1. Symbols must be imported by name rather than by ordinal.
+1. The combined total length of the message box's title and content must be exactly 64 bytes.
 
-Through nine meticulous steps, I produced a 268-byte PE file.
+These requirements inherently increase the file size, as they introduce constraints that make it more difficult to minimize the file. The challenge, therefore, was to achieve the smallest possible file size _despite_ these restrictions. Through nine meticulous steps, I was able to produce a PE file with a size of just 268 bytes.
 
 The experiment unfolded as follows:
 
